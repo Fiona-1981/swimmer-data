@@ -1,9 +1,11 @@
 import { useState, type SubmitEvent } from "react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { isProtocol, PROTOCOLS, type Protocol } from "@/lib/protocols"
+import { isTag, TAGS, type Tag } from "@/lib/tags"
 import type { Rep } from "@/lib/types"
 
 // Touch targets are 60px tall (h-15) for wet hands and covered iPads.
@@ -13,12 +15,17 @@ import type { Rep } from "@/lib/types"
 const inputClassName =
   "h-15 px-3 text-lg md:text-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 const labelClassName = "text-base"
+// Shared by protocol and tag chips; the selected chip is filled.
+const chipClassName =
+  "h-15 text-base whitespace-normal aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
 
 function App() {
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   // Inputs give us text, so keep it as strings and convert on submit.
   const [strokeRate, setStrokeRate] = useState("")
   const [timeSeconds, setTimeSeconds] = useState("")
+  const [tags, setTags] = useState<Tag[]>([])
+  const [note, setNote] = useState("")
   // Oldest first, so a rep's number is its position + 1.
   const [reps, setReps] = useState<Rep[]>([])
 
@@ -29,17 +36,23 @@ function App() {
     event.preventDefault()
     if (protocol === null) return
 
+    const trimmedNote = note.trim()
     const rep: Rep = {
       protocol,
       strokeRate: Number(strokeRate),
       timeSeconds: Number(timeSeconds),
+      tags,
+      // Only include a note if something other than spaces was typed.
+      ...(trimmedNote ? { note: trimmedNote } : {}),
     }
     // Make a new array rather than changing the old one, so React re-renders.
     setReps((current) => [...current, rep])
 
-    // Clear the numbers for the next rep but keep the protocol selected.
+    // Clear everything for the next rep except the protocol.
     setStrokeRate("")
     setTimeSeconds("")
+    setTags([])
+    setNote("")
   }
 
   function undoLastRep() {
@@ -77,11 +90,7 @@ function App() {
             }}
           >
             {PROTOCOLS.map((p) => (
-              <ToggleGroupItem
-                key={p}
-                value={p}
-                className="h-15 text-base whitespace-normal aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-              >
+              <ToggleGroupItem key={p} value={p} className={chipClassName}>
                 {p}
               </ToggleGroupItem>
             ))}
@@ -125,6 +134,42 @@ function App() {
           </Field>
         </div>
 
+        <FieldSet>
+          <FieldLegend className="data-[variant=legend]:text-lg">
+            Tags (optional)
+          </FieldLegend>
+          <ToggleGroup
+            multiple
+            variant="outline"
+            className="grid w-full grid-cols-3"
+            value={tags}
+            // The guard filters out anything that isn't a known tag.
+            onValueChange={(values) => setTags(values.filter(isTag))}
+          >
+            {TAGS.map((t) => (
+              <ToggleGroupItem key={t} value={t} className={chipClassName}>
+                {t}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </FieldSet>
+
+        <Field>
+          <FieldLabel className={labelClassName} htmlFor="note">
+            Note (optional)
+          </FieldLabel>
+          <Input
+            className={inputClassName}
+            id="note"
+            type="text"
+            maxLength={80}
+            autoComplete="off"
+            placeholder="e.g. breathed on 3"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </Field>
+
         <Button type="submit" className="h-15 text-lg" disabled={!canSubmit}>
           Add rep
         </Button>
@@ -154,18 +199,36 @@ function App() {
               return (
                 <li
                   key={repNumber}
-                  className="flex items-baseline gap-3 rounded-lg border px-4 py-3 text-base"
+                  className="flex flex-col gap-2 rounded-lg border px-4 py-3 text-base"
                 >
-                  <span className="font-medium whitespace-nowrap">
-                    Rep {repNumber}
-                  </span>
-                  <span className="flex-1">{rep.protocol}</span>
-                  <span className="whitespace-nowrap tabular-nums">
-                    {rep.strokeRate} spm
-                  </span>
-                  <span className="whitespace-nowrap tabular-nums">
-                    {rep.timeSeconds.toFixed(2)} s
-                  </span>
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-medium whitespace-nowrap">
+                      Rep {repNumber}
+                    </span>
+                    <span className="flex-1">{rep.protocol}</span>
+                    <span className="whitespace-nowrap tabular-nums">
+                      {rep.strokeRate} spm
+                    </span>
+                    <span className="whitespace-nowrap tabular-nums">
+                      {rep.timeSeconds.toFixed(2)} s
+                    </span>
+                  </div>
+                  {rep.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {rep.tags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="h-6 text-sm"
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {rep.note && (
+                    <p className="text-sm text-muted-foreground">{rep.note}</p>
+                  )}
                 </li>
               )
             })}
