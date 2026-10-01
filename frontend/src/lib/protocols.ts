@@ -11,3 +11,8 @@ export const PROTOCOLS = [
 
 // "All out" | "Fastest movement" | "Tempo" | "100 feel" | "200 feel" | "Race footage"
 export type Protocol = (typeof PROTOCOLS)[number]
+
+// Type guard: narrows an unknown value to Protocol if it's in the list.
+export function isProtocol(value: unknown): value is Protocol {
+  return PROTOCOLS.includes(value as Protocol)
+}
