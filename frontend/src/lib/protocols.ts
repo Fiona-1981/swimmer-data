@@ -3,13 +3,13 @@
 export const PROTOCOLS = [
   "All out",
   "Fastest movement",
-  "Tempo",
-  "100 feel",
-  "200 feel",
+  "50 pace",
+  "100 pace",
+  "200 pace",
   "Race footage",
 ] as const
 
-// "All out" | "Fastest movement" | "Tempo" | "100 feel" | "200 feel" | "Race footage"
+// "All out" | "Fastest movement" | "50 pace" | "100 pace" | "200 pace" | "Race footage"
 export type Protocol = (typeof PROTOCOLS)[number]
 
 // Type guard: narrows an unknown value to Protocol if it's in the list.
