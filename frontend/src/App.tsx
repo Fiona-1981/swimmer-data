@@ -54,15 +54,20 @@ function App() {
   }
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-md flex-col p-4">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    // Phones: one column. iPad and up (md, 768px+): form left, reps right.
+    // items-start stops the panes stretching, which `sticky` needs to work.
+    <main className="mx-auto grid min-h-svh w-full max-w-md grid-cols-1 content-start items-start gap-8 p-4 md:max-w-5xl md:grid-cols-2 md:gap-10 md:p-8">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-6 md:sticky md:top-8"
+      >
         <FieldSet>
           <FieldLegend className="data-[variant=legend]:text-lg">
             Protocol
           </FieldLegend>
           <ToggleGroup
             variant="outline"
-            className="grid w-full grid-cols-2"
+            className="grid w-full grid-cols-2 md:grid-cols-3"
             value={protocol ? [protocol] : []}
             onValueChange={(values) => {
               // Tapping the selected chip again would clear it; ignore that
@@ -83,46 +88,49 @@ function App() {
           </ToggleGroup>
         </FieldSet>
 
-        <Field>
-          <FieldLabel className={labelClassName} htmlFor="stroke-rate">
-            Stroke rate (strokes/min)
-          </FieldLabel>
-          <Input
-            className={inputClassName}
-            id="stroke-rate"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            placeholder="Stroke rate"
-            value={strokeRate}
-            onChange={(e) => setStrokeRate(e.target.value)}
-          />
-        </Field>
+        {/* items-end lines the boxes up if one label wraps to two lines. */}
+        <div className="grid grid-cols-1 items-end gap-6 md:grid-cols-2 md:gap-4">
+          <Field>
+            <FieldLabel className={labelClassName} htmlFor="stroke-rate">
+              Stroke rate (strokes/min)
+            </FieldLabel>
+            <Input
+              className={inputClassName}
+              id="stroke-rate"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              placeholder="Stroke rate"
+              value={strokeRate}
+              onChange={(e) => setStrokeRate(e.target.value)}
+            />
+          </Field>
 
-        <Field>
-          <FieldLabel className={labelClassName} htmlFor="time-seconds">
-            Time (seconds)
-          </FieldLabel>
-          <Input
-            className={inputClassName}
-            id="time-seconds"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step={0.01}
-            placeholder="e.g. 18.42"
-            value={timeSeconds}
-            onChange={(e) => setTimeSeconds(e.target.value)}
-          />
-        </Field>
+          <Field>
+            <FieldLabel className={labelClassName} htmlFor="time-seconds">
+              Time (seconds)
+            </FieldLabel>
+            <Input
+              className={inputClassName}
+              id="time-seconds"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step={0.01}
+              placeholder="e.g. 18.42"
+              value={timeSeconds}
+              onChange={(e) => setTimeSeconds(e.target.value)}
+            />
+          </Field>
+        </div>
 
         <Button type="submit" className="h-15 text-lg" disabled={!canSubmit}>
           Add rep
         </Button>
       </form>
 
-      <section className="mt-8 flex flex-col gap-4">
+      <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-lg font-medium">Reps ({reps.length})</h2>
           <Button
