@@ -1,29 +1,73 @@
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Field,
-  FieldDescription,
-  FieldLabel,
-} from "@/components/ui/field"
+import { Field, FieldLabel, FieldSet } from "@/components/ui/field"
+
+// Large touch targets for poolside iPads (Apple recommends 44px minimum).
+// md:text-lg is needed to override the Input's default md:text-sm.
+const inputClassName = "h-12 px-3 text-lg md:text-lg"
+const labelClassName = "text-base"
+
+// A stroke rate field plus a minutes:seconds time field.
+// `id` prefixes the input ids, e.g. "all-out" -> "all-out-rate".
+function RateTimeGroup({ id, title }: { id: string; title: string }) {
+  return (
+    <FieldSet className="w-full">
+      <Field>
+        <FieldLabel className={labelClassName} htmlFor={`${id}-rate`}>
+          {title} stroke rate
+        </FieldLabel>
+        <Input
+          className={inputClassName}
+          id={`${id}-rate`}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={1}
+          placeholder="Stroke rate"
+        />
+      </Field>
+      <Field>
+        <FieldLabel className={labelClassName} htmlFor={`${id}-time-minutes`}>
+          {title} time
+        </FieldLabel>
+        <div className="flex items-center gap-2">
+          <Input
+            className={inputClassName}
+            id={`${id}-time-minutes`}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            placeholder="min"
+            aria-label={`${title} time minutes`}
+          />
+          <span className="text-lg">:</span>
+          <Input
+            className={inputClassName}
+            id={`${id}-time-seconds`}
+            type="number"
+            inputMode="decimal"
+            min={0}
+            max={59.99}
+            step={0.01}
+            placeholder="sec"
+            aria-label={`${title} time seconds`}
+          />
+        </div>
+      </Field>
+    </FieldSet>
+  )
+}
 
 function App() {
   return (
     <>
-      <div className="flex min-h-svh flex-col items-center justify-center">
-        <Button>Woohoo!</Button>
-        <Button>Another button</Button>
-        <Button>Woohoo!</Button>
-        <Field>
-          <FieldLabel htmlFor="input-demo-api-key">All out rate</FieldLabel>
-          <Input id="input-demo-api-key" type="password" placeholder="Rate" />
-          {/* <FieldDescription>
-            A field description can go here.
-          </FieldDescription> */}
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="input-demo-api-key">All out time</FieldLabel>
-          <Input id="input-demo-api-key" type="password" placeholder="Time" />
-        </Field>
+      <div className="flex min-h-svh flex-col items-center justify-center gap-10 p-4">
+        <div className="grid w-full max-w-2xl grid-cols-1 gap-x-12 gap-y-10 sm:grid-cols-2">
+          <RateTimeGroup id="all-out" title="All out" />
+          <RateTimeGroup id="fastest-movement" title="Fastest movement" />
+          <RateTimeGroup id="test-rate-1" title="Test Rate 1" />
+          <RateTimeGroup id="test-rate-2" title="Test Rate 2" />
+        </div>
       </div>
     </>
   )
