@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input"
-import { Field, FieldLabel, FieldSet } from "@/components/ui/field"
+import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 
 // Large touch targets for poolside iPads (Apple recommends 44px minimum).
 // md:text-lg is needed to override the Input's default md:text-sm.
@@ -14,9 +14,12 @@ const labelClassName = "text-base"
 function RateTimeGroup({ id, title }: { id: string; title: string }) {
   return (
     <FieldSet className="w-full">
+      <FieldLegend className="data-[variant=legend]:text-lg">
+        {title}
+      </FieldLegend>
       <Field>
         <FieldLabel className={labelClassName} htmlFor={`${id}-rate`}>
-          {title} stroke rate (strokes/min)
+          Stroke rate (strokes/min)
         </FieldLabel>
         <Input
           className={inputClassName}
@@ -30,7 +33,7 @@ function RateTimeGroup({ id, title }: { id: string; title: string }) {
       </Field>
       <Field>
         <FieldLabel className={labelClassName} htmlFor={`${id}-time`}>
-          {title} time (seconds)
+          Time (seconds)
         </FieldLabel>
         <Input
           className={inputClassName}
