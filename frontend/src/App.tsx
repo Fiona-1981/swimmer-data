@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { isProtocol, PROTOCOLS, type Protocol } from "@/lib/protocols"
+import type { Rep } from "@/lib/types"
 
 // Touch targets are 60px tall (h-15) for wet hands and covered iPads.
 // md:text-lg is needed to override the Input's default md:text-sm.
@@ -13,17 +14,13 @@ const inputClassName =
   "h-15 px-3 text-lg md:text-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 const labelClassName = "text-base"
 
-type Rep = {
-  protocol: Protocol
-  strokeRate: number
-  timeSeconds: number
-}
-
 function App() {
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   // Inputs give us text, so keep it as strings and convert on submit.
   const [strokeRate, setStrokeRate] = useState("")
   const [timeSeconds, setTimeSeconds] = useState("")
+  // Oldest first, so a rep's number is its position + 1.
+  const [reps, setReps] = useState<Rep[]>([])
 
   const canSubmit = protocol !== null && strokeRate !== "" && timeSeconds !== ""
 
@@ -37,11 +34,23 @@ function App() {
       strokeRate: Number(strokeRate),
       timeSeconds: Number(timeSeconds),
     }
-    console.log("Rep added", rep)
+    // Make a new array rather than changing the old one, so React re-renders.
+    setReps((current) => [...current, rep])
 
     // Clear the numbers for the next rep but keep the protocol selected.
     setStrokeRate("")
     setTimeSeconds("")
+  }
+
+  function undoLastRep() {
+    const last = reps.at(-1)
+    if (!last) return
+
+    // Ask first, so a stray wet tap can't remove a rep.
+    const confirmed = window.confirm(
+      `Remove Rep ${reps.length} (${last.protocol}, ${last.strokeRate} spm, ${last.timeSeconds.toFixed(2)} s)?`,
+    )
+    if (confirmed) setReps((current) => current.slice(0, -1))
   }
 
   return (
@@ -112,6 +121,49 @@ function App() {
           Add rep
         </Button>
       </form>
+
+      <section className="mt-8 flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-medium">Reps ({reps.length})</h2>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-15 px-4 text-base"
+            onClick={undoLastRep}
+            disabled={reps.length === 0}
+          >
+            Undo last rep
+          </Button>
+        </div>
+
+        {reps.length === 0 ? (
+          <p className="text-muted-foreground">No reps yet.</p>
+        ) : (
+          <ol className="flex flex-col gap-2">
+            {/* Copy before reversing: .reverse() would change the state array. */}
+            {[...reps].reverse().map((rep, i) => {
+              const repNumber = reps.length - i
+              return (
+                <li
+                  key={repNumber}
+                  className="flex items-baseline gap-3 rounded-lg border px-4 py-3 text-base"
+                >
+                  <span className="font-medium whitespace-nowrap">
+                    Rep {repNumber}
+                  </span>
+                  <span className="flex-1">{rep.protocol}</span>
+                  <span className="whitespace-nowrap tabular-nums">
+                    {rep.strokeRate} spm
+                  </span>
+                  <span className="whitespace-nowrap tabular-nums">
+                    {rep.timeSeconds.toFixed(2)} s
+                  </span>
+                </li>
+              )
+            })}
+          </ol>
+        )}
+      </section>
     </main>
   )
 }
