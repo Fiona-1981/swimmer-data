@@ -56,8 +56,6 @@ function App() {
         <div className="grid w-full max-w-2xl grid-cols-1 gap-x-12 gap-y-10 sm:grid-cols-2">
           <RateTimeGroup id="all-out" title="All out" />
           <RateTimeGroup id="fastest-movement" title="Fastest movement" />
-          <RateTimeGroup id="test-rate-1" title="Test Rate 1" />
-          <RateTimeGroup id="test-rate-2" title="Test Rate 2" />
         </div>
       </div>
     </>
