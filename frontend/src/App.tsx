@@ -9,14 +9,14 @@ const inputClassName =
   "h-12 px-3 text-lg md:text-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 const labelClassName = "text-base"
 
-// A stroke rate field plus a minutes:seconds time field.
+// A stroke rate field plus a time field in seconds (to hundredths).
 // `id` prefixes the input ids, e.g. "all-out" -> "all-out-rate".
 function RateTimeGroup({ id, title }: { id: string; title: string }) {
   return (
     <FieldSet className="w-full">
       <Field>
         <FieldLabel className={labelClassName} htmlFor={`${id}-rate`}>
-          {title} stroke rate
+          {title} stroke rate (strokes/min)
         </FieldLabel>
         <Input
           className={inputClassName}
@@ -29,33 +29,18 @@ function RateTimeGroup({ id, title }: { id: string; title: string }) {
         />
       </Field>
       <Field>
-        <FieldLabel className={labelClassName} htmlFor={`${id}-time-minutes`}>
-          {title} time
+        <FieldLabel className={labelClassName} htmlFor={`${id}-time`}>
+          {title} time (seconds)
         </FieldLabel>
-        <div className="flex items-center gap-2">
-          <Input
-            className={inputClassName}
-            id={`${id}-time-minutes`}
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            placeholder="min"
-            aria-label={`${title} time minutes`}
-          />
-          <span className="text-lg">:</span>
-          <Input
-            className={inputClassName}
-            id={`${id}-time-seconds`}
-            type="number"
-            inputMode="decimal"
-            min={0}
-            max={59.99}
-            step={0.01}
-            placeholder="sec"
-            aria-label={`${title} time seconds`}
-          />
-        </div>
+        <Input
+          className={inputClassName}
+          id={`${id}-time`}
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step={0.01}
+          placeholder="e.g. 18.42"
+        />
       </Field>
     </FieldSet>
   )
