@@ -3,7 +3,10 @@ import { Field, FieldLabel, FieldSet } from "@/components/ui/field"
 
 // Large touch targets for poolside iPads (Apple recommends 44px minimum).
 // md:text-lg is needed to override the Input's default md:text-sm.
-const inputClassName = "h-12 px-3 text-lg md:text-lg"
+// The last three classes hide number spinners: [appearance:textfield] for
+// Firefox, the ::-webkit-*-spin-button ones for Chrome and Safari.
+const inputClassName =
+  "h-12 px-3 text-lg md:text-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 const labelClassName = "text-base"
 
 // A stroke rate field plus a minutes:seconds time field.
