@@ -1,3 +1,8 @@
 .venv/
+
+# Vitest reports and artifacts
+.vitest/
+
+node_modules
 .env
 .env.local
