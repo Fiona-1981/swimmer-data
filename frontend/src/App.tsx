@@ -66,6 +66,17 @@ function App() {
     if (confirmed) setReps((current) => current.slice(0, -1))
   }
 
+  function submitReps() {
+    const confirmed = window.confirm(
+      `Submit ${reps.length} ${reps.length === 1 ? "rep" : "reps"} to the swimmer's file?`,
+    )
+    if (!confirmed) return
+
+    // Placeholder until there's a backend: log the reps, then start afresh.
+    console.log("Submitted reps", reps)
+    setReps([])
+  }
+
   return (
     // Phones: one column. iPad and up (md, 768px+): form left, reps right.
     // items-start stops the panes stretching, which `sticky` needs to work.
@@ -233,6 +244,12 @@ function App() {
               )
             })}
           </ol>
+        )}
+
+        {reps.length > 0 && (
+          <Button type="button" className="h-15 text-lg" onClick={submitReps}>
+            Submit to swimmer's file
+          </Button>
         )}
       </section>
     </main>
