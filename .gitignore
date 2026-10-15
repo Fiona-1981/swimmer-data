@@ -6,3 +6,8 @@
 node_modules
 .env
 .env.local
+
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log

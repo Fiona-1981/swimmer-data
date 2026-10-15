@@ -28,3 +28,8 @@ dist-ssr
 
 # Vitest reports and artifacts
 .vitest/
+
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
