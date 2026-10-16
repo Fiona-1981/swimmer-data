@@ -11,7 +11,7 @@ from boto3.dynamodb.types import TypeSerializer
 TABLE_NAME = os.environ["TABLE_NAME"]
 
 # Keep in step with frontend/src/lib/protocols.ts
-PROTOCOLS = {"All-out", "Fastest movement", "Tempo", "100 feel", "200 feel", "Race footage"}
+PROTOCOLS = {"All out", "Fastest movement", "50 pace", "100 pace", "200 pace", "Race footage"}
 
 # A DynamoDB transaction holds at most 100 items: 1 session item + up to 99 reps
 MAX_REPS = 99
