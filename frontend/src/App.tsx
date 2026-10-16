@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { submitSession } from "@/lib/api"
+import { newSessionId, submitSession } from "@/lib/api"
 import { isProtocol, PROTOCOLS, type Protocol } from "@/lib/protocols"
 import { isTag, TAGS, type Tag } from "@/lib/tags"
 import type { Rep } from "@/lib/types"
@@ -40,10 +40,16 @@ function App() {
   const [note, setNote] = useState("")
   // Oldest first, so a rep's number is its position + 1.
   const [reps, setReps] = useState<Rep[]>([])
+  // Created with the first rep of a set and kept until that set is saved, so
+  // a retry reuses it and overwrites rather than creating a second session.
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>({ state: "idle" })
   const isSaving = saveStatus.state === "saving"
 
-  const canSubmit = protocol !== null && strokeRate !== "" && timeSeconds !== ""
+  // No adding mid-save: the list empties on success, so a rep added now
+  // would be numbered Rep 1 of the same session and overwrite the saved one.
+  const canSubmit =
+    protocol !== null && strokeRate !== "" && timeSeconds !== "" && !isSaving
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     // Stop the browser's default form submit, which would reload the page.
@@ -61,6 +67,7 @@ function App() {
     }
     // Make a new array rather than changing the old one, so React re-renders.
     setReps((current) => [...current, rep])
+    if (sessionId === null) setSessionId(newSessionId())
 
     // A new rep starts a new set, so the last "Saved" no longer applies.
     if (saveStatus.state === "saved") setSaveStatus({ state: "idle" })
@@ -87,20 +94,24 @@ function App() {
     const confirmed = window.confirm(
       `Submit ${reps.length} ${reps.length === 1 ? "rep" : "reps"} to the swimmer's file?`,
     )
-    if (!confirmed) return
+    // Always set once there's a rep; the check is for TypeScript.
+    if (!confirmed || sessionId === null) return
 
-    // Remember exactly what we sent, in case more reps are added meanwhile.
-    const submitted = reps
     setSaveStatus({ state: "saving" })
     try {
-      await submitSession(swimmerId, submitted)
-      // Remove only the reps that were saved; any added since stay listed.
-      setReps((current) => current.slice(submitted.length))
+      await submitSession(swimmerId, sessionId, reps)
+      // Saved, so the next rep starts a fresh session.
+      setReps([])
+      setSessionId(null)
       setSaveStatus({ state: "saved" })
     } catch (error) {
-      // Keep the reps so the coach can retry. fetch throws a TypeError if
-      // the network is down, so this catches that too.
-      const message = error instanceof Error ? error.message : "Save failed"
+      // Keep the reps and the sessionId so the coach can retry. fetch
+      // throws a TypeError if the network is down, so this catches that too.
+      let message = error instanceof Error ? error.message : "Save failed"
+      // The browser's own timeout message is vague ("signal timed out").
+      if (error instanceof DOMException && error.name === "TimeoutError") {
+        message = "No response from the server. Check the connection and try again."
+      }
       setSaveStatus({ state: "error", message })
     }
   }
