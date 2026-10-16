@@ -252,6 +252,18 @@ function App() {
           </Button>
         )}
       </section>
+
+      {/* md:col-span-2 stretches the footer under both panes on iPad. */}
+      <footer className="text-center text-sm text-muted-foreground md:col-span-2">
+        <a
+          href="https://github.com/Fiona-1981/swimmer-data"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-4 hover:text-foreground"
+        >
+          View the code on GitHub
+        </a>
+      </footer>
     </main>
   )
 }
