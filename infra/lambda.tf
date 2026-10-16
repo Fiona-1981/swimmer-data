@@ -1,6 +1,7 @@
 data "archive_file" "backend" {
   type        = "zip"
-  source_dir  = "${path.module}/../backend"
+  # Only the handler is zipped, so tests and dev requirements stay out of the Lambda
+  source_file = "${path.module}/../backend/handler.py"
   output_path = "${path.module}/build/backend.zip"
 }
 

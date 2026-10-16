@@ -1,0 +1,6 @@
+# Local development and tests only. The Lambda zip contains just handler.py
+# (see infra/lambda.tf), so nothing listed here is deployed.
+# boto3 is already built into the Lambda Python runtime; it's here so the
+# tests can import handler.py.
+boto3
+pytest
