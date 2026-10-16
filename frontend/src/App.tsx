@@ -1,4 +1,5 @@
 import { useState, type SubmitEvent } from "react"
+import { Check } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,18 +39,22 @@ function App() {
   const [timeSeconds, setTimeSeconds] = useState("")
   const [tags, setTags] = useState<Tag[]>([])
   const [note, setNote] = useState("")
-  // Oldest first, so a rep's number is its position + 1.
+  // Every rep in the session, oldest first. Saved reps stay listed until the
+  // session ends.
   const [reps, setReps] = useState<Rep[]>([])
-  // Created with the first rep of a set and kept until that set is saved, so
-  // a retry reuses it and overwrites rather than creating a second session.
+  // Created with the first rep of a session and kept until "End session", so
+  // every save and retry in the session writes under the same ID.
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>({ state: "idle" })
   const isSaving = saveStatus.state === "saving"
 
-  // No adding mid-save: the list empties on success, so a rep added now
-  // would be numbered Rep 1 of the same session and overwrite the saved one.
-  const canSubmit =
-    protocol !== null && strokeRate !== "" && timeSeconds !== "" && !isSaving
+  const unsavedReps = reps.filter((rep) => !rep.saved)
+  const lastRep = reps.at(-1)
+  // Saved reps can't be undone, and undoing mid-save would remove a rep
+  // that's being sent.
+  const canUndo = lastRep !== undefined && !lastRep.saved && !isSaving
+
+  const canSubmit = protocol !== null && strokeRate !== "" && timeSeconds !== ""
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     // Stop the browser's default form submit, which would reload the page.
@@ -57,16 +62,21 @@ function App() {
     if (protocol === null) return
 
     const trimmedNote = note.trim()
-    const rep: Rep = {
-      protocol,
-      strokeRate: Number(strokeRate),
-      timeSeconds: Number(timeSeconds),
-      tags,
-      // Only include a note if something other than spaces was typed.
-      ...(trimmedNote ? { note: trimmedNote } : {}),
-    }
     // Make a new array rather than changing the old one, so React re-renders.
-    setReps((current) => [...current, rep])
+    setReps((current) => [
+      ...current,
+      {
+        // One more than the last rep, or 1 for the first rep of a session.
+        repNumber: (current.at(-1)?.repNumber ?? 0) + 1,
+        saved: false,
+        protocol,
+        strokeRate: Number(strokeRate),
+        timeSeconds: Number(timeSeconds),
+        tags,
+        // Only include a note if something other than spaces was typed.
+        ...(trimmedNote ? { note: trimmedNote } : {}),
+      },
+    ])
     if (sessionId === null) setSessionId(newSessionId())
 
     // A new rep starts a new set, so the last "Saved" no longer applies.
@@ -80,33 +90,40 @@ function App() {
   }
 
   function undoLastRep() {
-    const last = reps.at(-1)
-    if (!last) return
+    if (!canUndo) return
 
     // Ask first, so a stray wet tap can't remove a rep.
     const confirmed = window.confirm(
-      `Remove Rep ${reps.length} (${last.protocol}, ${last.strokeRate} spm, ${last.timeSeconds.toFixed(2)} s)?`,
+      `Remove Rep ${lastRep.repNumber} (${lastRep.protocol}, ${lastRep.strokeRate} spm, ${lastRep.timeSeconds.toFixed(2)} s)?`,
     )
     if (confirmed) setReps((current) => current.slice(0, -1))
   }
 
   async function submitReps() {
+    // Freeze what's being sent; reps added during the save aren't included.
+    const toSave = unsavedReps
     const confirmed = window.confirm(
-      `Submit ${reps.length} ${reps.length === 1 ? "rep" : "reps"} to the swimmer's file?`,
+      `Submit ${toSave.length} ${toSave.length === 1 ? "rep" : "reps"} to the swimmer's file?`,
     )
     // Always set once there's a rep; the check is for TypeScript.
     if (!confirmed || sessionId === null) return
 
     setSaveStatus({ state: "saving" })
     try {
-      await submitSession(swimmerId, sessionId, reps)
-      // Saved, so the next rep starts a fresh session.
-      setReps([])
-      setSessionId(null)
+      await submitSession(swimmerId, sessionId, toSave)
+      // Mark exactly the reps that were sent. Updating from `current`, not
+      // `reps`, keeps any reps added while the request was in flight.
+      const savedNumbers = new Set(toSave.map((rep) => rep.repNumber))
+      setReps((current) =>
+        current.map((rep) =>
+          savedNumbers.has(rep.repNumber) ? { ...rep, saved: true } : rep,
+        ),
+      )
       setSaveStatus({ state: "saved" })
     } catch (error) {
-      // Keep the reps and the sessionId so the coach can retry. fetch
-      // throws a TypeError if the network is down, so this catches that too.
+      // Change nothing, so the coach can retry with the same reps and
+      // sessionId. fetch throws a TypeError if the network is down, so this
+      // catches that too.
       let message = error instanceof Error ? error.message : "Save failed"
       // The browser's own timeout message is vague ("signal timed out").
       if (error instanceof DOMException && error.name === "TimeoutError") {
@@ -114,6 +131,19 @@ function App() {
       }
       setSaveStatus({ state: "error", message })
     }
+  }
+
+  function endSession() {
+    if (unsavedReps.length > 0) {
+      const confirmed = window.confirm(
+        `End session? ${unsavedReps.length} unsaved ${unsavedReps.length === 1 ? "rep" : "reps"} will be lost.`,
+      )
+      if (!confirmed) return
+    }
+    // Back to the start: the next rep creates a new sessionId and is Rep 1.
+    setReps([])
+    setSessionId(null)
+    setSaveStatus({ state: "idle" })
   }
 
   return (
@@ -233,8 +263,7 @@ function App() {
             variant="outline"
             className="h-15 px-4 text-base"
             onClick={undoLastRep}
-            // Undoing mid-save would change which reps were sent.
-            disabled={reps.length === 0 || isSaving}
+            disabled={!canUndo}
           >
             Undo last rep
           </Button>
@@ -245,16 +274,26 @@ function App() {
         ) : (
           <ol className="flex flex-col gap-2">
             {/* Copy before reversing: .reverse() would change the state array. */}
-            {[...reps].reverse().map((rep, i) => {
-              const repNumber = reps.length - i
+            {[...reps].reverse().map((rep) => {
               return (
                 <li
-                  key={repNumber}
+                  key={rep.repNumber}
                   className="flex flex-col gap-2 rounded-lg border px-4 py-3 text-base"
                 >
                   <div className="flex items-baseline gap-3">
-                    <span className="font-medium whitespace-nowrap">
-                      Rep {repNumber}
+                    <span className="flex items-center gap-1 font-medium whitespace-nowrap">
+                      Rep {rep.repNumber}
+                      {rep.saved && (
+                        <>
+                          {/* aria-hidden: the icon is decoration; the
+                              sr-only text is what screen readers announce. */}
+                          <Check
+                            aria-hidden="true"
+                            className="size-4 text-green-600 dark:text-green-500"
+                          />
+                          <span className="sr-only">(saved)</span>
+                        </>
+                      )}
                     </span>
                     <span className="flex-1">{rep.protocol}</span>
                     <span className="whitespace-nowrap tabular-nums">
@@ -286,7 +325,9 @@ function App() {
           </ol>
         )}
 
-        {reps.length > 0 && (
+        {/* Only when there's something to save. Reps being sent stay unsaved
+            until the save succeeds, so it also stays up while "Saving…". */}
+        {unsavedReps.length > 0 && (
           <Button
             type="button"
             className="h-15 text-lg"
@@ -297,8 +338,8 @@ function App() {
           </Button>
         )}
 
-        {/* Outside the block above, so "Saved" still shows once the list
-            empties. role="status"/"alert" make screen readers announce it. */}
+        {/* Outside the block above, so "Saved" still shows once the button
+            hides. role="status"/"alert" make screen readers announce it. */}
         {saveStatus.state === "saved" && (
           <p role="status" className="text-center text-base">
             Saved
@@ -308,6 +349,19 @@ function App() {
           <p role="alert" className="text-center text-base text-destructive">
             {saveStatus.message}
           </p>
+        )}
+
+        {reps.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-15 text-lg"
+            onClick={endSession}
+            // Ending mid-save would clear reps whose save is still in flight.
+            disabled={isSaving}
+          >
+            End session
+          </Button>
         )}
       </section>
 

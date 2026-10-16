@@ -16,10 +16,10 @@ export function newSessionId() {
   return `${new Date().toISOString()}-${suffix}`
 }
 
-// Sends one session's reps to the backend. Resolves when they're saved;
-// throws an Error with a readable message if they weren't. Sending the same
-// sessionId and reps again overwrites rather than duplicates, so retries are
-// safe.
+// Sends some or all of a session's reps to the backend. Resolves when they're
+// all saved (the backend writes all or none); throws an Error with a readable
+// message if they weren't. Sending the same sessionId and reps again
+// overwrites rather than duplicates, so retries are safe.
 export async function submitSession(
   swimmerId: string,
   sessionId: string,
@@ -35,9 +35,8 @@ export async function submitSession(
       swimmerId,
       sessionId,
       // The backend uses shorter names than our Rep type does.
-      reps: reps.map((rep, i) => ({
-        // Same number the list shows as "Rep N"; it's part of the rep's key.
-        repNumber: i + 1,
+      reps: reps.map((rep) => ({
+        repNumber: rep.repNumber,
         protocol: rep.protocol,
         rate: rep.strokeRate,
         time: rep.timeSeconds,
