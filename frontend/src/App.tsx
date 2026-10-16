@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { submitSession } from "@/lib/api"
 import { isProtocol, PROTOCOLS, type Protocol } from "@/lib/protocols"
 import { isTag, TAGS, type Tag } from "@/lib/tags"
 import type { Rep } from "@/lib/types"
@@ -19,6 +20,17 @@ const labelClassName = "text-base"
 const chipClassName =
   "h-15 text-base whitespace-normal aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
 
+// Hard-coded until the coach can pick a swimmer.
+const swimmerId = "fiona"
+
+// Where the last "Submit to swimmer's file" got to. Only "error" carries a
+// message, and TypeScript makes us check the state before reading it.
+type SaveStatus =
+  | { state: "idle" }
+  | { state: "saving" }
+  | { state: "saved" }
+  | { state: "error"; message: string }
+
 function App() {
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   // Inputs give us text, so keep it as strings and convert on submit.
@@ -28,6 +40,8 @@ function App() {
   const [note, setNote] = useState("")
   // Oldest first, so a rep's number is its position + 1.
   const [reps, setReps] = useState<Rep[]>([])
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>({ state: "idle" })
+  const isSaving = saveStatus.state === "saving"
 
   const canSubmit = protocol !== null && strokeRate !== "" && timeSeconds !== ""
 
@@ -48,6 +62,9 @@ function App() {
     // Make a new array rather than changing the old one, so React re-renders.
     setReps((current) => [...current, rep])
 
+    // A new rep starts a new set, so the last "Saved" no longer applies.
+    if (saveStatus.state === "saved") setSaveStatus({ state: "idle" })
+
     // Clear everything for the next rep except the protocol.
     setStrokeRate("")
     setTimeSeconds("")
@@ -66,15 +83,26 @@ function App() {
     if (confirmed) setReps((current) => current.slice(0, -1))
   }
 
-  function submitReps() {
+  async function submitReps() {
     const confirmed = window.confirm(
       `Submit ${reps.length} ${reps.length === 1 ? "rep" : "reps"} to the swimmer's file?`,
     )
     if (!confirmed) return
 
-    // Placeholder until there's a backend: log the reps, then start afresh.
-    console.log("Submitted reps", reps)
-    setReps([])
+    // Remember exactly what we sent, in case more reps are added meanwhile.
+    const submitted = reps
+    setSaveStatus({ state: "saving" })
+    try {
+      await submitSession(swimmerId, submitted)
+      // Remove only the reps that were saved; any added since stay listed.
+      setReps((current) => current.slice(submitted.length))
+      setSaveStatus({ state: "saved" })
+    } catch (error) {
+      // Keep the reps so the coach can retry. fetch throws a TypeError if
+      // the network is down, so this catches that too.
+      const message = error instanceof Error ? error.message : "Save failed"
+      setSaveStatus({ state: "error", message })
+    }
   }
 
   return (
@@ -194,7 +222,8 @@ function App() {
             variant="outline"
             className="h-15 px-4 text-base"
             onClick={undoLastRep}
-            disabled={reps.length === 0}
+            // Undoing mid-save would change which reps were sent.
+            disabled={reps.length === 0 || isSaving}
           >
             Undo last rep
           </Button>
@@ -247,9 +276,27 @@ function App() {
         )}
 
         {reps.length > 0 && (
-          <Button type="button" className="h-15 text-lg" onClick={submitReps}>
-            Submit to swimmer's file
+          <Button
+            type="button"
+            className="h-15 text-lg"
+            onClick={submitReps}
+            disabled={isSaving}
+          >
+            {isSaving ? "Saving…" : "Submit to swimmer's file"}
           </Button>
+        )}
+
+        {/* Outside the block above, so "Saved" still shows once the list
+            empties. role="status"/"alert" make screen readers announce it. */}
+        {saveStatus.state === "saved" && (
+          <p role="status" className="text-center text-base">
+            Saved
+          </p>
+        )}
+        {saveStatus.state === "error" && (
+          <p role="alert" className="text-center text-base text-destructive">
+            {saveStatus.message}
+          </p>
         )}
       </section>
 
