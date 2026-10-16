@@ -29,4 +29,22 @@ resource "aws_lambda_function" "sessions" {
   filename         = data.archive_file.backend.output_path
   source_code_hash = data.archive_file.backend.output_base64sha256
   timeout          = 10
+    environment {
+    variables = {
+      TABLE_NAME = aws_dynamodb_table.swimmer_data.name
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "lambda_dynamodb" {
+  name = "write-sessions"
+  role = aws_iam_role.lambda.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["dynamodb:PutItem"]
+      Resource = aws_dynamodb_table.swimmer_data.arn
+    }]
+  })
 }

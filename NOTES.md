@@ -1,3 +1,13 @@
+## Future: analysis view 16th october 2026
+
+- **Pivot-style filters:** date range, protocols (one, several or all), tags to exclude (e.g. Tired, Pullout off).
+- **Pooled curve:** speed vs rate is the same physics whatever the protocol, so pool all reps and use protocol as colour, not a filter.
+- **All reps vs frontier:** fit the curve to every rep, or to the best speed at each rate (the performance frontier) to show capability rather than average.
+- **Period comparison:** overlay two periods (e.g. April vs September) with peaks marked. Up = faster at the same rate; peak to the right = can use higher rates (strength). Show uncertainty bands so small samples aren't over-read.
+- **Nice to have later: what-if.** A rate slider showing predicted speed and marginal gain from the fitted curve, within the range of rates actually swum (no extrapolation).
+
+
+
 24th September 2026
 Going to look at front end first, then work backwards due to the nature of 
 this project - user is paramount, data structure can come afterwards. 
