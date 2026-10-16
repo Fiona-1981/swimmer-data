@@ -33,3 +33,4 @@ dist-ssr
 *.tfstate
 *.tfstate.*
 crash.log
+infra/build/

@@ -11,3 +11,4 @@ node_modules
 *.tfstate
 *.tfstate.*
 crash.log
+infra/build/
