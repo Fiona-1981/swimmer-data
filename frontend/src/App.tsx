@@ -1,4 +1,4 @@
-import { useState, type MouseEvent, type SubmitEvent } from "react"
+import { useEffect, useState, type SubmitEvent } from "react"
 import { Check, ChevronLeft } from "lucide-react"
 import { Link } from "react-router"
 import { Badge } from "@/components/ui/badge"
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { newSessionId, submitSession } from "@/lib/api"
+import { loadLocalSession, storeLocalSession } from "@/lib/localSession"
 import { isProtocol, PROTOCOLS, type Protocol } from "@/lib/protocols"
 import { isTag, TAGS, type Tag } from "@/lib/tags"
 import type { Rep } from "@/lib/types"
@@ -38,14 +39,25 @@ function App({ swimmerId }: { swimmerId: string }) {
   const [timeSeconds, setTimeSeconds] = useState("")
   const [tags, setTags] = useState<Tag[]>([])
   const [note, setNote] = useState("")
+  // Pick up this swimmer's session from the browser, if one is in progress.
+  // The function form runs once, on the first render, not on every render.
+  const [initialSession] = useState(() => loadLocalSession(swimmerId))
   // Every rep in the session, oldest first. Saved reps stay listed until the
   // session ends.
-  const [reps, setReps] = useState<Rep[]>([])
+  const [reps, setReps] = useState<Rep[]>(initialSession.reps)
   // Created with the first rep of a session and kept until "End session", so
   // every save and retry in the session writes under the same ID.
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(
+    initialSession.sessionId,
+  )
   const [saveStatus, setSaveStatus] = useState<SaveStatus>({ state: "idle" })
   const isSaving = saveStatus.state === "saving"
+
+  // Copy the session to the browser after every change, so leaving the page
+  // or refreshing loses nothing. End session empties it, which removes it.
+  useEffect(() => {
+    storeLocalSession(swimmerId, { sessionId, reps })
+  }, [swimmerId, sessionId, reps])
 
   const unsavedReps = reps.filter((rep) => !rep.saved)
   const lastRep = reps.at(-1)
@@ -145,16 +157,6 @@ function App({ swimmerId }: { swimmerId: string }) {
     setSaveStatus({ state: "idle" })
   }
 
-  // Leaving this page throws away its state, so ask before losing reps.
-  function confirmLeave(event: MouseEvent<HTMLAnchorElement>) {
-    if (unsavedReps.length === 0) return
-    const confirmed = window.confirm(
-      `Leave this page? ${unsavedReps.length} unsaved ${unsavedReps.length === 1 ? "rep" : "reps"} will be lost.`,
-    )
-    // preventDefault stops Link from navigating, so the coach stays here.
-    if (!confirmed) event.preventDefault()
-  }
-
   return (
     // Phones: one column. iPad and up (md, 768px+): form left, reps right.
     // items-start stops the panes stretching, which `sticky` needs to work.
@@ -162,7 +164,6 @@ function App({ swimmerId }: { swimmerId: string }) {
       {/* h-15 keeps it a full-size touch target, like the buttons. */}
       <Link
         to="/"
-        onClick={confirmLeave}
         className="inline-flex h-15 items-center gap-1 justify-self-start text-base underline-offset-4 hover:underline md:col-span-2"
       >
         <ChevronLeft aria-hidden="true" className="size-5" />
