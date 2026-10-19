@@ -22,9 +22,6 @@ const labelClassName = "text-base"
 const chipClassName =
   "h-15 text-base whitespace-normal aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
 
-// Hard-coded until the coach can pick a swimmer.
-const swimmerId = "fiona"
-
 // Where the last "Submit to swimmer's file" got to. Only "error" carries a
 // message, and TypeScript makes us check the state before reading it.
 type SaveStatus =
@@ -33,7 +30,8 @@ type SaveStatus =
   | { state: "saved" }
   | { state: "error"; message: string }
 
-function App() {
+// swimmerId comes from the address, e.g. /swimmers/test-kate (see main.tsx).
+function App({ swimmerId }: { swimmerId: string }) {
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   // Inputs give us text, so keep it as strings and convert on submit.
   const [strokeRate, setStrokeRate] = useState("")
