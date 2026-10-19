@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { ChevronRight } from "lucide-react"
 import { Link } from "react-router"
+import SiteFooter from "@/components/SiteFooter"
 import { Card, CardTitle } from "@/components/ui/card"
 import { getSwimmers, type Swimmer } from "@/lib/swimmers"
 
@@ -65,6 +66,8 @@ function SwimmerList() {
           ))}
         </ul>
       )}
+
+      <SiteFooter />
     </main>
   )
 }

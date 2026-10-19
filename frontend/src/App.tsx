@@ -1,6 +1,7 @@
 import { useEffect, useState, type SubmitEvent } from "react"
 import { Check, ChevronLeft } from "lucide-react"
 import { Link } from "react-router"
+import SiteFooter from "@/components/SiteFooter"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -445,16 +446,7 @@ function App({ swimmer }: { swimmer: Swimmer }) {
       </section>
 
       {/* md:col-span-2 stretches the footer under both panes on iPad. */}
-      <footer className="text-center text-sm text-muted-foreground md:col-span-2">
-        <a
-          href="https://github.com/Fiona-1981/swimmer-data"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline underline-offset-4 hover:text-foreground"
-        >
-          View the code on GitHub
-        </a>
-      </footer>
+      <SiteFooter className="md:col-span-2" />
     </main>
   )
 }
