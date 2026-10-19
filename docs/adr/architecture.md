@@ -1,5 +1,7 @@
 Big button interface for easy input by coaches on poolside. 
 
+“Frontend deploys from GitHub via Cloudflare Workers Builds, so the live site always matches a commit.”
+
 
 ```mermaid
 flowchart TD
