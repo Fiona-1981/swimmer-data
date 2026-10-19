@@ -20,6 +20,8 @@ Note: “Parked: coaches add and manage their own swimmers (needs auth and coach
 
 Another note: “Next tickets: (1) history: a ‘History’ button beside each swimmer on the list page, so the coach can review and talk it through before capturing; needs a GET endpoint and read permission. (2) Auth: required before any real swimmer data.”
 
+“Media (parked): show a quiet link to Swim England’s Wavepower guidance at the consent step, and optionally once on first upload. Don’t interrupt; coaches are already trained.”
+
 ---
 
 ## Decision records (authored by Claude)
