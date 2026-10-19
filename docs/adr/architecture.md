@@ -67,7 +67,7 @@ Each record is short: what prompted it, what was decided, and what follows from 
 
 ### ADR 3: Static frontend on Cloudflare, API on AWS
 
-**Status:** Accepted, in place by 15 October 2026
+**Status:** Accepted, in place by 15 October 2026. How the frontend is deployed is replaced by ADR 6.
 
 **Context.** *(Reasons from Fiona.)* This is a personal learning project that will go on a CV and be discussed at job interviews, so low cost and relevant skills both matter.
 - **Cloudflare:** the project needed its own domain, which looks cleaner when people are testing it and keeps things tidy. `swimmerdata.dev` was available through Cloudflare at a low price. With the domain bought there, hosting the frontend on Cloudflare too was the natural next step, and it's good value for money.
@@ -99,7 +99,7 @@ Each record is short: what prompted it, what was decided, and what follows from 
 
 ### ADR 5: Saved reps stay listed until End session
 
-**Status:** Accepted, 16 October 2026 (replaces clearing the list after each save)
+**Status:** Accepted, 16 October 2026 (replaces clearing the list after each save). Where the session is kept is replaced by ADR 7.
 
 **Context.** Clearing the list after each save hid what the coach had already recorded. It also caused a numbering problem: a rep added during a save could become Rep 1 again and overwrite the rep that had just been saved.
 
@@ -113,3 +113,40 @@ Each record is short: what prompted it, what was decided, and what follows from 
 - A new rep's number is always the last rep's number + 1. Because only an unsaved last rep can be removed, the list is always numbered 1, 2, 3… with no gaps, and a saved rep's number is never given to a different rep.
 - Coaches can save as they go, and add reps while a save is in progress.
 - The session lives only in the page, so a refresh loses unsaved reps and the session ID. Keeping it in the browser is on the roadmap.
+
+### ADR 6: The frontend deploys automatically on push
+
+**Status:** Accepted, 19 October 2026 (replaces ADR 3's hand-run frontend deploy)
+
+**Context.** Deploying the frontend meant remembering to run `npm run build` and `npx wrangler deploy` after pushing. It was easy to forget: several changes sat on GitHub for hours while the live site still had an older version.
+
+**Decision.** The Worker is connected to the GitHub repo through Cloudflare's Git integration. Every push to `main` makes Cloudflare build `frontend/` and deploy it. The backend stays as it was: Terraform, applied by hand.
+
+**Consequences.**
+- The live site matches `main` within a couple of minutes of a push, with nothing to remember.
+- Pushing is deploying. Anything pushed to `main` goes live, so check `npm run build` passes locally first. A failed build leaves the previous version live, and the log is on the Worker's Deployments page.
+- The two halves now deploy differently, so the deploy-order rule from ADR 3 needs more care: if a change needs the new backend first, run `terraform apply` *before* pushing.
+- `npx wrangler deploy` still works by hand, for example to deploy without pushing.
+
+### ADR 7: Each swimmer's session is kept in the browser
+
+**Status:** Accepted, 19 October 2026 (replaces ADR 5's in-page-only session)
+
+**Context.** The session lived only in the page's memory. Going back to the swimmer list, refreshing, or the iPad closing the tab threw away the unsaved reps and the session ID. A warning on the Back link helped, but it couldn't catch the browser's Back button or a refresh. Once sessions survive, a new question follows: a session from days ago shouldn't quietly carry on as if it were today's.
+
+**Decision.**
+- The session (`sessionId`, every rep with its `saved` flag, and `lastActivityAt`) is stored in `localStorage` under `swimmer-data:session:<swimmerId>`, one entry per swimmer. It's written after every change and removed by End session.
+- Stored data is checked before it's used. Anything corrupt or from an older version of the app (such as a renamed protocol) gives an empty session rather than crashing the page.
+- `lastActivityAt` is updated whenever a rep is added, undone or saved. A session untouched for more than 12 hours (`STALE_AFTER_HOURS`) is stale when the page opens:
+  - **every rep saved:** start a fresh session and remove the old one, since everything is in the database;
+  - **any rep unsaved:** keep it, and show a note such as "2 unsaved reps from Tuesday. Submit them or end the session."
+- Age is measured from the last activity, not the session start, so a long session that's still in use never counts as stale. Sessions stored before `lastActivityAt` existed fall back to their start time, taken from the session ID. That can only make a session look older, which is harmless because a stale session is only cleared when nothing in it is unsaved.
+
+**Consequences.**
+- Leaving the page, the Back button, a refresh and a sleeping iPad all lose nothing, so the Back link no longer warns. End session still warns, because it really does discard unsaved reps.
+- Unsaved reps are never thrown away automatically, stale or not.
+- A refresh during a save brings the reps back unticked. Resubmitting is safe because of ADR 1.
+- The session is only on that device and browser: another iPad won't see it, and clearing the browser's site data deletes it. Saved reps are in DynamoDB either way.
+- If `localStorage` fails (full, or blocked in private browsing), the app carries on without the local copy.
+- Staleness is only checked when the page opens, and relies on the device's clock.
+- `isStale` takes the current time as an argument rather than reading the clock, so its tests can check the 12-hour boundary exactly.
