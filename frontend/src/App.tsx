@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/input"
 import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { newSessionId, submitSession } from "@/lib/api"
-import { loadLocalSession, storeLocalSession } from "@/lib/localSession"
+import { describeDay } from "@/lib/calculations"
+import {
+  EMPTY_SESSION,
+  isStale,
+  lastActivity,
+  loadLocalSession,
+  storeLocalSession,
+} from "@/lib/localSession"
 import type { Swimmer } from "@/lib/swimmers"
 import { isProtocol, PROTOCOLS, type Protocol } from "@/lib/protocols"
 import { isTag, TAGS, type Tag } from "@/lib/tags"
@@ -43,24 +50,51 @@ function App({ swimmer }: { swimmer: Swimmer }) {
   const [tags, setTags] = useState<Tag[]>([])
   const [note, setNote] = useState("")
   // Pick up this swimmer's session from the browser, if one is in progress.
-  // The function form runs once, on the first render, not on every render.
-  const [initialSession] = useState(() => loadLocalSession(swimmerId))
+  // The function form runs once, on the first render, not on every render,
+  // so `openedAt` is fixed for as long as the page is open.
+  const [initial] = useState(() => {
+    const stored = loadLocalSession(swimmerId)
+    const openedAt = new Date()
+    if (!isStale(stored, openedAt)) {
+      return { session: stored, staleSince: null, openedAt }
+    }
+    // Old, and everything's in the database: start afresh. The effect below
+    // then removes the old session from storage.
+    if (stored.reps.every((rep) => rep.saved)) {
+      return { session: EMPTY_SESSION, staleSince: null, openedAt }
+    }
+    // Old but with unsaved reps: never throw those away. Keep the session
+    // and let the coach decide (see the note above the list).
+    return { session: stored, staleSince: lastActivity(stored), openedAt }
+  })
   // Every rep in the session, oldest first. Saved reps stay listed until the
   // session ends.
-  const [reps, setReps] = useState<Rep[]>(initialSession.reps)
+  const [reps, setReps] = useState<Rep[]>(initial.session.reps)
   // Created with the first rep of a session and kept until "End session", so
   // every save and retry in the session writes under the same ID.
   const [sessionId, setSessionId] = useState<string | null>(
-    initialSession.sessionId,
+    initial.session.sessionId,
   )
+  const [lastActivityAt, setLastActivityAt] = useState(
+    initial.session.lastActivityAt,
+  )
+  // When the old session was last used, if it was stale with unsaved reps.
+  // Cleared by any activity, since the coach has then picked it back up.
+  const [staleSince, setStaleSince] = useState(initial.staleSince)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>({ state: "idle" })
   const isSaving = saveStatus.state === "saving"
 
   // Copy the session to the browser after every change, so leaving the page
   // or refreshing loses nothing. End session empties it, which removes it.
   useEffect(() => {
-    storeLocalSession(swimmerId, { sessionId, reps })
-  }, [swimmerId, sessionId, reps])
+    storeLocalSession(swimmerId, { sessionId, reps, lastActivityAt })
+  }, [swimmerId, sessionId, reps, lastActivityAt])
+
+  // Call when a rep is added, undone or saved.
+  function recordActivity() {
+    setLastActivityAt(new Date().toISOString())
+    setStaleSince(null)
+  }
 
   const unsavedReps = reps.filter((rep) => !rep.saved)
   const lastRep = reps.at(-1)
@@ -92,6 +126,7 @@ function App({ swimmer }: { swimmer: Swimmer }) {
       },
     ])
     if (sessionId === null) setSessionId(newSessionId())
+    recordActivity()
 
     // A new rep starts a new set, so the last "Saved" no longer applies.
     if (saveStatus.state === "saved") setSaveStatus({ state: "idle" })
@@ -110,7 +145,9 @@ function App({ swimmer }: { swimmer: Swimmer }) {
     const confirmed = window.confirm(
       `Remove Rep ${lastRep.repNumber} (${lastRep.protocol}, ${lastRep.strokeRate} spm, ${lastRep.timeSeconds.toFixed(2)} s)?`,
     )
-    if (confirmed) setReps((current) => current.slice(0, -1))
+    if (!confirmed) return
+    setReps((current) => current.slice(0, -1))
+    recordActivity()
   }
 
   async function submitReps() {
@@ -133,6 +170,7 @@ function App({ swimmer }: { swimmer: Swimmer }) {
           savedNumbers.has(rep.repNumber) ? { ...rep, saved: true } : rep,
         ),
       )
+      recordActivity()
       setSaveStatus({ state: "saved" })
     } catch (error) {
       // Change nothing, so the coach can retry with the same reps and
@@ -157,6 +195,8 @@ function App({ swimmer }: { swimmer: Swimmer }) {
     // Back to the start: the next rep creates a new sessionId and is Rep 1.
     setReps([])
     setSessionId(null)
+    setLastActivityAt(undefined)
+    setStaleSince(null)
     setSaveStatus({ state: "idle" })
   }
 
@@ -295,6 +335,18 @@ function App({ swimmer }: { swimmer: Swimmer }) {
             Undo last rep
           </Button>
         </div>
+
+        {staleSince !== null && unsavedReps.length > 0 && (
+          <p
+            role="status"
+            className="rounded-lg border bg-muted px-4 py-3 text-base"
+          >
+            {unsavedReps.length} unsaved{" "}
+            {unsavedReps.length === 1 ? "rep" : "reps"} from{" "}
+            {describeDay(staleSince, initial.openedAt)}. Submit{" "}
+            {unsavedReps.length === 1 ? "it" : "them"} or end the session.
+          </p>
+        )}
 
         {reps.length === 0 ? (
           <p className="text-muted-foreground">No reps yet.</p>

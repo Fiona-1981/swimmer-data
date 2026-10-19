@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatTime, toTotalSeconds } from "./calculations"
+import { describeDay, formatTime, toTotalSeconds } from "./calculations"
 
 describe("toTotalSeconds", () => {
   it("combines minutes and seconds", () => {
@@ -26,5 +26,30 @@ describe("formatTime", () => {
 
   it("round-trips with toTotalSeconds", () => {
     expect(formatTime(toTotalSeconds(2, 7.3))).toBe("2:07.30")
+  })
+})
+
+describe("describeDay", () => {
+  // Local times, so these pass in any time zone. Monday 19 October 2026.
+  const now = new Date(2026, 9, 19, 20, 0)
+
+  it("says earlier today for the same day", () => {
+    expect(describeDay(new Date(2026, 9, 19, 6, 30), now)).toBe("earlier today")
+  })
+
+  it("says yesterday for the day before, even late at night", () => {
+    expect(describeDay(new Date(2026, 9, 18, 23, 59), now)).toBe("yesterday")
+  })
+
+  it("uses the day name within the last week", () => {
+    expect(describeDay(new Date(2026, 9, 13, 18, 0), now)).toBe("Tuesday")
+  })
+
+  it("uses the date for a week ago or more", () => {
+    expect(describeDay(new Date(2026, 9, 12, 18, 0), now)).toBe("12 October")
+  })
+
+  it("adds the year when it isn't this year", () => {
+    expect(describeDay(new Date(2025, 11, 30, 18, 0), now)).toBe("30 December 2025")
   })
 })

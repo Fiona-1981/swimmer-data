@@ -15,3 +15,24 @@ export function formatTime(totalSeconds: number): string {
   const seconds = ((hundredths % 6000) / 100).toFixed(2).padStart(5, "0")
   return `${minutes}:${seconds}`
 }
+
+// Says when `then` was, relative to `now`, for messages like "2 unsaved reps
+// from Tuesday": "earlier today", "yesterday", the day name within the last
+// week, or the date for anything older. Uses the device's local time.
+export function describeDay(then: Date, now: Date): string {
+  // Count calendar days, not 24-hour periods: 11pm yesterday is "yesterday".
+  // Rounding absorbs the hour gained or lost when the clocks change.
+  const startOfDay = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  const daysAgo = Math.round((startOfDay(now) - startOfDay(then)) / 86_400_000)
+
+  if (daysAgo === 0) return "earlier today"
+  if (daysAgo === 1) return "yesterday"
+  // Within the last week, so the day name can only mean one day.
+  if (daysAgo < 7) return then.toLocaleDateString("en-GB", { weekday: "long" })
+  return then.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    ...(then.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+  })
+}
