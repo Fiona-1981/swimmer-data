@@ -8,6 +8,7 @@ import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { newSessionId, submitSession } from "@/lib/api"
 import { loadLocalSession, storeLocalSession } from "@/lib/localSession"
+import type { Swimmer } from "@/lib/swimmers"
 import { isProtocol, PROTOCOLS, type Protocol } from "@/lib/protocols"
 import { isTag, TAGS, type Tag } from "@/lib/tags"
 import type { Rep } from "@/lib/types"
@@ -23,7 +24,7 @@ const labelClassName = "text-base"
 const chipClassName =
   "h-15 text-base whitespace-normal aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
 
-// Where the last "Submit to swimmer's file" got to. Only "error" carries a
+// Where the last "Submit to <name>'s file" got to. Only "error" carries a
 // message, and TypeScript makes us check the state before reading it.
 type SaveStatus =
   | { state: "idle" }
@@ -31,8 +32,10 @@ type SaveStatus =
   | { state: "saved" }
   | { state: "error"; message: string }
 
-// swimmerId comes from the address, e.g. /swimmers/test-kate (see main.tsx).
-function App({ swimmerId }: { swimmerId: string }) {
+// The swimmer is looked up from the address, e.g. /swimmers/test-kate (see
+// SwimmerRoute.tsx), so App only ever sees one that exists.
+function App({ swimmer }: { swimmer: Swimmer }) {
+  const swimmerId = swimmer.id
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   // Inputs give us text, so keep it as strings and convert on submit.
   const [strokeRate, setStrokeRate] = useState("")
@@ -114,7 +117,7 @@ function App({ swimmerId }: { swimmerId: string }) {
     // Freeze what's being sent; reps added during the save aren't included.
     const toSave = unsavedReps
     const confirmed = window.confirm(
-      `Submit ${toSave.length} ${toSave.length === 1 ? "rep" : "reps"} to the swimmer's file?`,
+      `Submit ${toSave.length} ${toSave.length === 1 ? "rep" : "reps"} to ${swimmer.name}'s file?`,
     )
     // Always set once there's a rep; the check is for TypeScript.
     if (!confirmed || sessionId === null) return
@@ -161,14 +164,18 @@ function App({ swimmerId }: { swimmerId: string }) {
     // Phones: one column. iPad and up (md, 768px+): form left, reps right.
     // items-start stops the panes stretching, which `sticky` needs to work.
     <main className="mx-auto grid min-h-svh w-full max-w-md grid-cols-1 content-start items-start gap-8 p-4 md:max-w-5xl md:grid-cols-2 md:gap-10 md:p-8">
-      {/* h-15 keeps it a full-size touch target, like the buttons. */}
-      <Link
-        to="/"
-        className="inline-flex h-15 items-center gap-1 justify-self-start text-base underline-offset-4 hover:underline md:col-span-2"
-      >
-        <ChevronLeft aria-hidden="true" className="size-5" />
-        Back to swimmers
-      </Link>
+      {/* md:col-span-2: one row above both panes on iPad. */}
+      <header className="flex flex-col items-start md:col-span-2">
+        {/* h-15 keeps it a full-size touch target, like the buttons. */}
+        <Link
+          to="/"
+          className="inline-flex h-15 items-center gap-1 text-base underline-offset-4 hover:underline"
+        >
+          <ChevronLeft aria-hidden="true" className="size-5" />
+          Back to swimmers
+        </Link>
+        <h1 className="text-2xl font-medium">{swimmer.name}</h1>
+      </header>
 
       <form
         onSubmit={handleSubmit}
@@ -354,7 +361,7 @@ function App({ swimmerId }: { swimmerId: string }) {
             onClick={submitReps}
             disabled={isSaving}
           >
-            {isSaving ? "Saving…" : "Submit to swimmer's file"}
+            {isSaving ? "Saving…" : `Submit to ${swimmer.name}'s file`}
           </Button>
         )}
 
