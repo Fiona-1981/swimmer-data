@@ -118,7 +118,7 @@ Pushing to GitHub doesn't deploy anything. When a change touches both halves, de
 │   ├── tests/               pytest tests for validate and build_items
 │   └── requirements-dev.txt Test-only dependencies
 ├── infra/                   Terraform: API Gateway, Lambda, DynamoDB
-└── docs/                    Architecture, data model and decision records
+└── docs/adr/                Architecture notes and decision records
 ```
 
 The protocol list exists twice, in `frontend/src/lib/protocols.ts` and `backend/handler.py`. Change both together.
