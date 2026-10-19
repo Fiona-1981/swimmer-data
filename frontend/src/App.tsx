@@ -1,5 +1,6 @@
-import { useState, type SubmitEvent } from "react"
-import { Check } from "lucide-react"
+import { useState, type MouseEvent, type SubmitEvent } from "react"
+import { Check, ChevronLeft } from "lucide-react"
+import { Link } from "react-router"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -146,10 +147,30 @@ function App() {
     setSaveStatus({ state: "idle" })
   }
 
+  // Leaving this page throws away its state, so ask before losing reps.
+  function confirmLeave(event: MouseEvent<HTMLAnchorElement>) {
+    if (unsavedReps.length === 0) return
+    const confirmed = window.confirm(
+      `Leave this page? ${unsavedReps.length} unsaved ${unsavedReps.length === 1 ? "rep" : "reps"} will be lost.`,
+    )
+    // preventDefault stops Link from navigating, so the coach stays here.
+    if (!confirmed) event.preventDefault()
+  }
+
   return (
     // Phones: one column. iPad and up (md, 768px+): form left, reps right.
     // items-start stops the panes stretching, which `sticky` needs to work.
     <main className="mx-auto grid min-h-svh w-full max-w-md grid-cols-1 content-start items-start gap-8 p-4 md:max-w-5xl md:grid-cols-2 md:gap-10 md:p-8">
+      {/* h-15 keeps it a full-size touch target, like the buttons. */}
+      <Link
+        to="/"
+        onClick={confirmLeave}
+        className="inline-flex h-15 items-center gap-1 justify-self-start text-base underline-offset-4 hover:underline md:col-span-2"
+      >
+        <ChevronLeft aria-hidden="true" className="size-5" />
+        Back to swimmers
+      </Link>
+
       <form
         onSubmit={handleSubmit}
         className="flex flex-col gap-6 md:sticky md:top-8"
